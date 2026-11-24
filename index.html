@@ -1,0 +1,891 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="逐项验证车内毫米波雷达数据集能否支持呼吸、心率与车辆振动抑制研究。">
+  <meta name="theme-color" content="#12162e">
+  <title>车载雷达数据验收台</title>
+  <style>
+:root {
+  color-scheme: light;
+  --ink: #1b2036;
+  --muted: #596079;
+  --border: #e5e7f0;
+  --paper: #fff;
+  --canvas: #f5f6fb;
+  --accent: #523bc8;
+  --accent-dark: #412da8;
+  --accent-soft: #eeebff;
+  --shadow: 0 3px 12px rgba(31, 31, 73, .035);
+  font-family: "Inter", "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+  line-height: 1.55;
+  color: var(--ink);
+  background: var(--canvas);
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; font-size: 16px; }
+button, input, textarea, select { font: inherit; }
+button { cursor: pointer; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible { outline: 3px solid #8a71f5; outline-offset: 3px; }
+button:disabled { cursor: not-allowed; opacity: .55; }
+a { color: var(--accent-dark); }
+h1, h2, h3, p { margin: 0; }
+button { color: inherit; }
+.topbar { height: 76px; padding: 0 32px; display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 25px; background: var(--paper); border-bottom: 1px solid var(--border); position: sticky; top: 0; z-index: 4; }
+.brand { display: flex; align-items: center; gap: 11px; font-weight: 750; font-size: 17px; letter-spacing: .01em; }
+.brand-icon { width: 36px; height: 36px; flex: 0 0 36px; position: relative; display: grid; place-items: center; border-radius: 11px; background: #5b43d3; color: white; }
+.brand-icon::before, .brand-icon::after, .brand-icon i { content: ""; display: block; border: 1px solid currentColor; border-radius: 50%; position: absolute; }
+.brand-icon::before { width: 19px; height: 19px; opacity: .65; }
+.brand-icon::after { width: 10px; height: 10px; }
+.brand-icon i { width: 3px; height: 3px; background: white; box-shadow: 6px -6px 0 #fff; }
+.tabs { display: flex; align-self: stretch; gap: 29px; }
+.tab { position: relative; color: var(--muted); border: 0; background: transparent; padding: 0 5px; white-space: nowrap; font-size: 14px; font-weight: 650; }
+.tab.active { color: var(--accent-dark); }
+.tab.active::after { content: ""; height: 3px; border-radius: 3px 3px 0 0; position: absolute; bottom: 0; left: 0; right: 0; background: #6c50df; }
+.button { border: 1px solid transparent; border-radius: 8px; min-height: 40px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; padding: 8px 14px; font-size: 14px; font-weight: 700; line-height: 1.25; white-space: nowrap; }
+.button.primary { background: var(--accent); color: white; }
+.button.primary:hover { background: var(--accent-dark); }
+.button.outline { background: white; border-color: #daddeb; }
+.button.outline:hover { background: #f0edfd; border-color: #c8bdf8; }
+.button.small { min-height: 34px; padding: 6px 10px; }
+.export-top { justify-self: end; }
+.export-top span { font-size: 19px; line-height: 1; }
+.workspace { display: grid; grid-template-columns: 246px minmax(0, 1fr); min-height: calc(100vh - 76px); }
+.sidebar { display: flex; flex-direction: column; justify-content: space-between; align-self: start; position: sticky; top: 76px; height: calc(100vh - 76px); padding: 30px 19px 20px; background: white; border-right: 1px solid var(--border); overflow: auto; }
+.sidebar-heading { display: flex; align-items: center; justify-content: space-between; padding: 0 5px; margin-bottom: 15px; }
+.sidebar-heading h2 { color: #3e4560; font-size: 14px; font-weight: 750; }
+.counter { color: #5c6177; font-size: 13px; background: #f1f2f8; border-radius: 7px; min-width: 24px; padding: 1px 6px; text-align: center; }
+.new-button { width: 100%; margin-bottom: 21px; }
+.new-button span { font-size: 19px; line-height: 1; }
+.dataset-list { display: grid; gap: 7px; }
+.dataset { width: 100%; display: grid; grid-template-columns: 35px minmax(0, 1fr); align-items: center; gap: 10px; padding: 10px 8px; text-align: left; border: 1px solid transparent; border-radius: 10px; background: transparent; min-height: 63px; }
+.dataset:hover { background: #f7f6ff; }
+.dataset.active { background: #f0edff; border-color: #e4ddff; }
+.dataset-logo { display: grid; place-items: center; height: 35px; border-radius: 8px; background: #edf1f9; color: #4a567a; font-size: 12px; font-weight: 800; letter-spacing: .02em; }
+.dataset.active .dataset-logo { background: #ded5ff; color: #4329a2; }
+.dataset strong, .dataset small { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dataset strong { font-size: 14px; }
+.dataset small { color: #5e647c; font-size: 12px; margin-top: 2px; }
+.side-footer { margin-top: 24px; padding: 13px 6px 0; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+.side-footer p { display: flex; align-items: center; gap: 6px; }
+.local-dot { width: 7px; height: 7px; border-radius: 50%; background: #28856c; flex: 0 0 7px; }
+.backup-actions { display: flex; gap: 8px; margin-top: 7px; align-items: center; }
+.text-button { color: var(--accent-dark); background: transparent; border: 0; padding: 3px 0; font-size: 13px; font-weight: 650; }
+.text-button:hover { text-decoration: underline; }
+main { max-width: 1510px; width: 100%; margin-inline: auto; padding: 28px 38px 48px; min-width: 0; }
+.path { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 14px; margin-bottom: 16px; }
+.path b { color: #323a55; font-weight: 650; overflow-wrap: anywhere; }
+.hero { position: relative; isolation: isolate; min-height: 224px; padding: 28px 32px; display: grid; align-content: center; border-radius: 16px; overflow: hidden; color: white; background: radial-gradient(ellipse at 82% 55%, #272050, transparent 55%), linear-gradient(112deg, #171a34 20%, #201940); box-shadow: 0 5px 18px rgba(33, 26, 68, .12); }
+.hero-content { position: relative; z-index: 1; max-width: min(72%, 720px); }
+.hero-meta { display: flex; align-items: center; gap: 8px; color: #d4ccfb; font-size: 14px; }
+.hero-meta .point { display: inline-block; width: 7px; height: 7px; background: #ad98ff; border-radius: 50%; flex: 0 0 7px; }
+.hero h1 { margin-top: 3px; letter-spacing: -.045em; font-size: clamp(36px, 4vw, 61px); line-height: 1.13; overflow-wrap: anywhere; }
+.hero p { margin-top: 10px; font-size: 15px; color: #ddd7f7; max-width: 540px; overflow-wrap: anywhere; }
+.hero-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 16px; margin-top: 19px; }
+.hero .outline { color: #fff; background: #ffffff13; border-color: #ffffff40; }
+.hero .outline:hover { background: #ffffff29; }
+.hero a { color: #e2d9ff; font-size: 14px; text-underline-offset: 4px; }
+.radar { position: absolute; z-index: 0; width: min(43%, 380px); aspect-ratio: 1; right: 2%; top: 50%; transform: translateY(-50%); pointer-events: none; opacity: .91; border-radius: 50%; }
+.radar-grid { position: absolute; inset: 9%; border-radius: 50%; border: 1px solid #bb9fff44; background: repeating-radial-gradient(circle, transparent 0, transparent 15%, #a188ec3b 15.3%, transparent 15.7%, transparent 22.4%), linear-gradient(0deg, transparent 49.8%, #a188ec4f 50%, transparent 50.2%), linear-gradient(90deg, transparent 49.8%, #a188ec4f 50%, transparent 50.2%); }
+.radar-sweep { position: absolute; inset: 9%; border-radius: 50%; background: conic-gradient(from 340deg, transparent 1deg, #9374fc08 42deg, #9478fe73 86deg, #a68bffb0 87deg, transparent 88deg); }
+.radar-dot { position: absolute; width: 8px; height: 8px; background: #bbabff; border-radius: 50%; box-shadow: 0 0 19px #b09bff; }
+.radar-dot.center { top: calc(50% - 4px); left: calc(50% - 4px); }
+.radar-dot.near { top: 40%; left: 66%; }
+.radar-dot.far { top: 27%; left: 75%; width: 5px; height: 5px; }
+.summary { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin: 18px 0 26px; }
+.summary-card, .panel { border: 1px solid var(--border); border-radius: 13px; background: white; box-shadow: var(--shadow); }
+.summary-card { padding: 15px 16px; min-width: 0; }
+.card-top { display: flex; align-items: center; gap: 9px; justify-content: space-between; }
+.card-top h2 { display: flex; align-items: center; gap: 9px; font-size: 15px; min-width: 0; }
+.summary-icon { border-radius: 8px; background: #f0ebfe; color: var(--accent); width: 31px; height: 31px; flex: 0 0 31px; display: grid; place-items: center; }
+.summary-icon svg { width: 18px; height: 18px; }
+.summary-card p { color: var(--muted); font-size: 13px; padding-top: 9px; line-height: 1.55; overflow-wrap: anywhere; }
+.badge { min-width: 0; display: inline-flex; align-items: center; gap: 5px; border-radius: 24px; padding: 4px 9px; font-size: 12px; font-weight: 700; line-height: 1.35; white-space: nowrap; }
+.badge::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: currentColor; flex: 0 0 6px; }
+.badge.neutral { color: #555d75; background: #edf0f6; }
+.badge.green { color: #146451; background: #e1f6ee; }
+.badge.amber { color: #80450b; background: #fff0db; }
+.badge.red { color: #982c48; background: #fce8ee; }
+.work-area { display: grid; grid-template-columns: minmax(0, 1.82fr) minmax(260px, 1fr); gap: 17px; align-items: start; }
+.checks-title { display: flex; align-items: start; justify-content: space-between; gap: 16px; margin-bottom: 13px; }
+.checks-title h2, .page-heading h1 { line-height: 1.24; letter-spacing: -.025em; font-size: 24px; }
+.checks-title p, .page-heading p { color: var(--muted); font-size: 14px; margin-top: 5px; }
+.progress { min-width: 111px; text-align: right; color: var(--accent-dark); font-size: 13px; font-weight: 750; padding-top: 4px; }
+.progress progress { appearance: none; display: block; width: 100%; height: 5px; margin-top: 5px; border: 0; border-radius: 9px; overflow: hidden; background: #e5e1f4; }
+.progress progress::-webkit-progress-bar { background: #e5e1f4; }
+.progress progress::-webkit-progress-value { background: #7859eb; }
+.progress progress::-moz-progress-bar { background: #7859eb; }
+.stage { margin-bottom: 10px; overflow: clip; }
+.stage summary { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto 15px; gap: 10px; align-items: center; padding: 14px; cursor: pointer; list-style: none; }
+.stage summary::-webkit-details-marker { display: none; }
+.stage summary:hover { background: #faf9ff; }
+.stage-number { display: grid; place-items: center; width: 34px; height: 34px; border-radius: 8px; background: #f0ebfe; color: var(--accent-dark); font-size: 13px; font-weight: 800; }
+.stage-title strong { display: block; font-size: 15px; }
+.stage-title small { display: block; margin-top: 2px; font-size: 13px; color: var(--muted); }
+.stage-count { font-size: 12px; color: var(--muted); white-space: nowrap; }
+.chevron { width: 8px; height: 8px; border: solid #666b83; border-width: 0 1.7px 1.7px 0; transform: rotate(45deg); justify-self: center; }
+.stage[open] .chevron { transform: rotate(225deg); }
+.check-row { border-top: 1px solid #eef0f6; padding: 13px 14px 13px 16px; display: grid; gap: 7px 8px; grid-template-columns: minmax(0, 1fr) auto; align-items: start; }
+.check-row h3 { font-size: 14px; }
+.check-row p { margin-top: 3px; color: var(--muted); font-size: 13px; overflow-wrap: anywhere; }
+.check-row .entry-tools { display: flex; align-items: center; gap: 7px; justify-content: end; }
+.check-row .entry-tools .text-button { min-width: 34px; }
+.evidence-link { font-size: 13px; margin-top: 3px; display: inline-block; }
+.right-stack { display: grid; gap: 14px; }
+.side-panel { padding: 17px; }
+.side-panel h2 { font-size: 16px; }
+.side-panel p { color: var(--muted); margin-top: 7px; font-size: 14px; overflow-wrap: anywhere; }
+.next-panel { border-left: 3px solid #7459e4; background: #fdfcff; }
+.next-panel h3 { margin-top: 11px; font-size: 15px; }
+.next-panel .button { margin-top: 12px; color: var(--accent-dark); }
+.verdicts { margin: 6px 0 0; }
+.verdicts > div { padding: 8px 0; border-top: 1px solid #f0eff6; display: flex; align-items: center; gap: 6px; justify-content: space-between; }
+.verdicts > div:first-child { border-top: 0; }
+.verdicts dt { color: #3d455d; font-size: 13px; }
+.verdicts dd { margin: 0; }
+.protocol-text { white-space: pre-wrap; }
+.page-heading { padding: 4px 0 22px; }
+.page-heading h1 { font-size: 36px; }
+.secondary { padding: 20px; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; text-align: left; }
+th, td { padding: 13px 10px; border-bottom: 1px solid var(--border); vertical-align: top; font-size: 14px; }
+th { color: #3d455d; white-space: nowrap; }
+td p { color: var(--muted); font-size: 13px; margin-top: 5px; }
+.guide-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.guide-grid h2 { font-size: 18px; }
+.guide-grid p { color: var(--muted); font-size: 15px; margin-top: 8px; }
+.copy-brief { margin-top: 16px; }
+dialog { width: min(calc(100% - 30px), 570px); max-height: calc(100% - 32px); border: 1px solid var(--border); padding: 23px; border-radius: 15px; color: var(--ink); box-shadow: 0 15px 65px #10102d44; }
+dialog::backdrop { background: #15132c83; }
+.dialog-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 12px; }
+.dialog-top h2 { font-size: 23px; }
+.close { border: 0; border-radius: 6px; background: #f0eefb; font-size: 24px; width: 34px; height: 34px; line-height: 1; }
+.form-help { font-size: 14px; color: var(--muted); margin-bottom: 12px; }
+.form-help strong { color: #3d455d; }
+.field { display: grid; gap: 6px; margin-bottom: 13px; font-size: 14px; font-weight: 650; }
+.field input, .field textarea, .field select { width: 100%; min-width: 0; border: 1px solid #d7daeb; background: white; border-radius: 7px; padding: 8px 10px; color: var(--ink); font-weight: 400; }
+.field textarea { min-height: 74px; resize: vertical; }
+.field .select-wrap { position: relative; }
+.field .select-wrap::after { content: ""; position: absolute; pointer-events: none; top: calc(50% - 5px); right: 16px; width: 8px; height: 8px; border: solid #666b83; border-width: 0 1.7px 1.7px 0; transform: rotate(45deg); }
+.field select { appearance: none; padding-right: 35px; }
+.dialog-actions { display: flex; justify-content: end; gap: 8px; padding-top: 8px; }
+.toast { position: fixed; z-index: 8; right: 20px; bottom: 20px; border-radius: 9px; background: #20203c; color: white; padding: 12px 17px; box-shadow: 0 5px 20px #22224338; opacity: 0; pointer-events: none; transform: translateY(8px); transition: transform .15s, opacity .15s; }
+.toast.show { opacity: 1; transform: none; }
+
+@media (max-width: 1200px) {
+  main { padding-inline: 25px; }
+  .workspace { grid-template-columns: 218px minmax(0, 1fr); }
+  .summary-card { padding-inline: 12px; }
+  .card-top { flex-wrap: wrap; }
+}
+@media (max-width: 980px) {
+  .work-area { grid-template-columns: 1fr; }
+  .right-stack { grid-template-columns: 1fr 1fr; }
+  .right-stack .protocol-panel { grid-column: 1 / -1; }
+  .topbar { padding-inline: 21px; gap: 14px; }
+  .tabs { gap: 14px; }
+}
+@media (max-width: 760px) {
+  .topbar { height: auto; min-height: 93px; grid-template-columns: 1fr auto; padding: 10px 13px 0; gap: 4px 8px; }
+  .brand { font-size: 15px; }
+  .brand-icon { width: 30px; height: 30px; flex-basis: 30px; }
+  .tabs { grid-row: 2; grid-column: 1 / -1; justify-content: space-around; gap: 2px; min-height: 43px; }
+  .button { min-height: 36px; padding-inline: 10px; }
+  .workspace { display: block; }
+  .sidebar { position: static; height: auto; display: block; padding: 14px 13px 10px; border-right: 0; border-bottom: 1px solid var(--border); }
+  .side-main { display: grid; gap: 7px; grid-template-columns: 1fr auto; }
+  .sidebar-heading { justify-content: start; gap: 7px; padding: 0; margin-bottom: 0; }
+  .new-button { width: auto; margin: 0; }
+  .dataset-list { display: flex; flex-wrap: wrap; grid-column: 1 / -1; }
+  .dataset { width: auto; min-height: 40px; grid-template-columns: 25px minmax(0, 1fr); padding: 4px 7px; }
+  .dataset-logo { height: 25px; }
+  .dataset small { display: none; }
+  .side-footer { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; margin-top: 8px; padding: 6px 0 0; }
+  .backup-actions { margin-top: 0; }
+  main { padding: 16px 13px 30px; }
+  .hero { min-height: 208px; padding: 19px; }
+  .hero-content { max-width: 100%; }
+  .radar { width: 55%; right: -5%; opacity: .43; }
+  .summary { gap: 6px; margin: 13px 0 17px; }
+  .summary-card { padding: 8px; }
+  .card-top h2 { gap: 5px; font-size: 13px; }
+  .summary-icon { display: none; }
+  .summary-card p { font-size: 12px; }
+  .stage-title small { line-height: 1.4; }
+  .right-stack, .guide-grid { grid-template-columns: 1fr; }
+  .check-row .entry-tools { flex-direction: column; gap: 1px; align-items: end; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; transition: none !important; }
+}
+
+</style>
+
+</head>
+<body>
+  <header class="topbar">
+    <div class="brand"><span class="brand-icon" aria-hidden="true"><i></i></span><span>车载雷达数据验收台</span></div>
+    <nav class="tabs" aria-label="工作台视图">
+      <button class="tab active" data-action="view" data-value="audit" aria-current="page">验证工作台</button>
+      <button class="tab" data-action="view" data-value="compare">数据集对比</button>
+      <button class="tab" data-action="view" data-value="guide">实验手册</button>
+    </nav>
+    <button class="button outline export-top" data-action="export" id="export-button"><span aria-hidden="true">↓</span> 导出报告</button>
+  </header>
+  <div class="workspace">
+    <aside class="sidebar" aria-label="数据集管理">
+      <div class="side-main">
+        <div class="sidebar-heading"><h2>我的数据集</h2><span id="dataset-count" class="counter"></span></div>
+        <button class="button primary new-button" data-action="new"><span aria-hidden="true">＋</span> 新建验证</button>
+        <div id="dataset-list" class="dataset-list"></div>
+      </div>
+      <div class="side-footer">
+        <p><span class="local-dot"></span> <span id="storage-status">记录保存在当前浏览器</span></p>
+        <div class="backup-actions">
+          <button class="text-button" data-action="backup">导出备份</button><span aria-hidden="true">/</span>
+          <button class="text-button" data-action="import">导入备份</button>
+        </div>
+        <input type="file" id="import-file" accept=".json,application/json" hidden>
+      </div>
+    </aside>
+    <main id="content" tabindex="-1"></main>
+  </div>
+  <dialog id="editor" aria-labelledby="dialog-title">
+    <form id="editor-form">
+      <div class="dialog-top"><h2 id="dialog-title"></h2><button type="button" class="close" data-action="close" aria-label="关闭">×</button></div>
+      <div id="dialog-fields"></div>
+      <div class="dialog-actions"><button type="button" class="button outline" data-action="close">取消</button><button class="button primary" type="submit">保存</button></div>
+    </form>
+  </dialog>
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+  <script>
+const statuses = {
+  pending: { label: "待验证", tone: "neutral" },
+  pass: { label: "通过", tone: "green" },
+  limited: { label: "有局限", tone: "amber" },
+  fail: { label: "未通过", tone: "red" },
+};
+
+const stages = [
+  {
+    title: "数据和版本",
+    summary: "确认手里的文件、信号层级和采集条件。",
+    checks: [
+      ["source", "版本与文件清单", "固定下载来源、版本或提交号。登记实际拿到的文件及许可，说明缺失、损坏或需要申请的部分。", "版本清单、文件路径、可读文件数"],
+      ["radar", "雷达输入与处理空间", "检查 ADC、复数 I/Q、处理后的谱或幅度属于哪一层。记录轴顺序、单位、采样率、裁剪、去杂波和相位保留情况。若算法依赖跨帧相位，实查 I/Q 连续性和接缝。", "变量树、形状、频率和相位诊断图"],
+      ["scenario", "工况能否定位到窗口", "将文件或窗口映射到司机、车辆、路况、动作和时间。区分停车、平稳行驶和路况较好的正常驾驶。核对来源和异常映射，填写无法映射的比例。", "片段 ID 到工况的清单和来源"],
+      ["coverage", "有效样本与缺失", "按受试者和工况列出原始窗口数、参考有效数及缺失原因。运动评分缺失记为未知，并保留排除日志。", "受试者 × 工况覆盖表"],
+    ],
+  },
+  {
+    title: "参考与时间对齐",
+    summary: "确认算法输出和接触式参考来自同一时间窗。",
+    checks: [
+      ["rrRef", "呼吸参考质量", "确认呼吸带波形或已有 RR 数值的来源、时基和错误段。固定窗口内 RR 计算方式。只有速率标签时，审计范围限定为速率。", "呼吸带波形、有效率及 RR 生成方式"],
+      ["hrRef", "心率参考质量", "核查 ECG、R 峰、IBI 或 HR 标签。标出异常间期、离群值、缺测和饱和。固定相同时间窗内的 HR 汇总方式。", "ECG/R 峰抽检、参考 HR 计算方式"],
+      ["sync", "同窗对齐有证据", "核对触发、采集日志、起止时间、帧率及丢帧。用验证数据或独立事件估计偏移与漂移，冻结方法。写清可支持的时间精度。", "时间轴图、偏移/漂移估计、错时规则"],
+    ],
+  },
+  {
+    title: "呼吸与心率可观测性",
+    summary: "先证明雷达跟得上真实变化，再比较算法。",
+    checks: [
+      ["chain", "处理链已校准", "用已知频率的复数 I/Q 检查形状、频率轴、单位、相位解缠和滤波边缘。另查真实数据的幅度衰落、漂移和相位跳变。", "合成参数、恢复误差和代表性真实窗口"],
+      ["rrSignal", "RR 基线胜过对照", "在低干扰数据上固定选通道、带通和估计方式。比较正确对齐、同人非重叠错时及历史均值。条件允许时补远区对照。检验逐窗误差与同人动态。", "逐窗预测、对照表、逐人有效窗口数"],
+      ["hrSignal", "HR 基线胜过对照", "沿用同一对照设计，额外检查呼吸谐波、半频与倍频。成批选多个峰时报告候选规模，并使用相同的对照规则。", "逐窗预测、谐波诊断、逐人对照结果"],
+    ],
+  },
+  {
+    title: "振动与实验条件",
+    summary: "区分颠簸场景、人体运动与可测的车身振动。",
+    checks: [
+      ["matched", "高低干扰有匹配对照", "优先比较同人、同车、相同动作的平坦拥堵和颠簸拥堵。检查速度、启停、动作、段顺序及各组样本，写清仍混在一起的因素。", "匹配表、基线按工况退化量、混杂项"],
+      ["motion", "人体运动有记录或控制", "确认动作标签、胸带运动或其他记录，至少在一组对照固定动作条件。区别主动动作、车身运动和受车辆激励的身体被动运动。", "动作定义、筛选/控制规则和覆盖率"],
+      ["imu", "独立振动参考已同步", "检查车体或支架加速度等独立振动测量的安装位置、轴向、单位、采样率、同步精度和有效带宽。用独立参考验证雷达中的振动相关性。", "同步 IMU/等效参考、相干或关联诊断"],
+    ],
+  },
+  {
+    title: "抑制效果与复现",
+    summary: "确认改善来自抑制模块，并能在留出数据复现。",
+    checks: [
+      ["split", "受试者划分与规则已冻结", "先按人拆分训练、验证与测试，检查重叠窗、同人多次记录和近邻切片泄漏。用开发数据定阈值、频带、时延和参数。试跑仅用于开发时记录范围。", "划分文件、协议版本、配置和随机种子"],
+      ["rrAblation", "RR 抑制消融有效", "在同批窗口和相同估计器上，仅切换抑制模块。报告 RR 的 MAE、长尾误差、同人动态和覆盖率，用逐人配对差或按人重采样区间表示不确定性。", "逐窗开/关配对表、逐人结果及置信区间"],
+      ["hrAblation", "HR 抑制消融有效", "对 HR 独立做同窗开关消融，并检查平滑造成的动态损失、呼吸谐波和倍频误判。比较相同覆盖率，并报告掉窗和最长连续无输出时长。", "逐窗开/关配对表、动态指标和覆盖率"],
+      ["attenuation", "振动相关成分下降", "用独立振动参考验证开关前后相关成分或目标频带内的耦合变化，同时在同窗检查呼吸/心率保真。说明参考轴向和解释范围。", "振动参考关联前后对照及生理保真结果"],
+    ],
+  },
+];
+
+const channels = [
+  { id: "rr", title: "呼吸率提取", unit: "RR", icon: "resp", requirements: ["radar", "rrRef", "sync", "chain", "rrSignal"], ready: "提取证据通过" },
+  { id: "hr", title: "心率提取", unit: "HR", icon: "heart", requirements: ["radar", "hrRef", "sync", "chain", "hrSignal"], ready: "提取证据通过" },
+  { id: "road", title: "颠簸场景验证", unit: "路况", icon: "wave", requirements: ["source", "scenario", "coverage", "matched", "motion", "split"], ready: "可做配对实验" },
+];
+
+const lookup = Object.fromEntries(stages.flatMap(stage => stage.checks.map(check => [check[0], check])));
+
+const acceptance = {
+  source: "清单能定位到实际读取的版本和文件，且目标任务所需的内容可获得。",
+  radar: "文件实测的形状、采样轴和信号层级一致，保留所选算法依赖的信息。",
+  scenario: "所比较窗口的司机、路况和动作可追溯，未知窗口可单列。",
+  coverage: "各组均达到预先规定的有效人数和窗口数，分母与排除原因可复核。",
+  rrRef: "有效窗呼吸参考达到协议要求，参考生成方法可复现。",
+  hrRef: "有效窗心率参考达到协议要求，异常和缺失已按统一规则标注。",
+  sync: "时间轴的偏移和变化有独立依据，剩余不确定性满足所选任务的时间精度。",
+  chain: "已知信号恢复达到预定容差，真实信号的质量和失效模式已检查。",
+  rrSignal: "冻结的 RR 基线在留出司机上持续优于两组对照，并能跟踪同人变化。阈值、方向和主要指标须预先规定。",
+  hrSignal: "冻结的 HR 基线在留出司机上持续优于两组对照，并能跟踪同人变化。倍频错误和拒测情况可追踪。",
+  matched: "能成对比较同人同车同动作，并报告剩余混杂和样本分布。",
+  motion: "主要比较已控制动作或可按动作分层，标签或测量的缺失可追踪。",
+  imu: "独立参考的轴向、时轴和频带有效，且与雷达干扰存在可复查的关联。",
+  split: "留出的司机和记录独立于调参，并有可复用的协议和配置。",
+  rrAblation: "在相同覆盖率下，RR 配对改善达到预设最小幅度，同人动态与覆盖率达到约定要求。",
+  hrAblation: "在相同覆盖率下，HR 配对改善达到预设最小幅度，同人动态与覆盖率达到约定要求。",
+  attenuation: "同步振动参考支持相关成分下降，至少一项生理指标在相同窗口保留预设的跟踪能力，并标明所支持的指标。",
+};
+
+const guide = [
+  ["新数据集先做小样本试跑", "抽取少量受试者，覆盖可用的车辆和工况。记录样本选择方法，保留低干扰、较强干扰、有动作和参考缺失的例子。试跑结论限定在已抽检范围。"],
+  ["冻结窗口和评价规则", "可先用非重叠 30 秒窗做诊断。低呼吸率时检查每窗有效周期数，必要时预先增加窗长。正式实验按人划分并固定开发/测试范围、评价窗、误差容差和最小覆盖率。"],
+  ["设置有解释力的对照", "同人非重叠错时保留个体平均水平，用多个偏移方向并检查参考变化幅度。历史均值只来自评估窗之前的参考。远区与胸部使用同样的通道数及取峰规则，并检查远区是否可能含人体反射。"],
+  ["同时看准确性、动态与覆盖率", "报告 MAE、大误差窗口占比，以及逐人去均值相关或相邻窗变化的匹配程度。覆盖率的分母用参考有效且符合协议的全部窗口。拒测时同时报告全组覆盖率和相同覆盖率下的误差。"],
+  ["从场景鲁棒性到物理抑制", "颠簸场景结论以同工况配对和开关消融为依据。物理抑制结论还需要独立同步的振动参考、抑制前后耦合比较，以及生理信息保真证据。"],
+  ["存档到可复现的粒度", "保留文件与代码版本、时间轴、窗口清单、排除规则、逐窗预测、逐人汇总以及未通过的检查。每条结论写明数据版本、信号表示、工况和未确认事项。"],
+  ["如何填写检查状态", "未做或缺少信息用待验证。证据只支持一部分条件用有局限。做过对照但未达到预定标准用未通过。记录足以支持本条要求时用通过。试跑范围、未覆盖工况和证据路径写入备注。"],
+];
+
+const physPaper = "https://proceedings.neurips.cc/paper_files/paper/2025/hash/3446e07569081f0f8a144e68bfa7afdf-Abstract-Datasets_and_Benchmarks_Track.html";
+const physRepo = "https://github.com/WJULYW/PhysDrive-Dataset";
+const icrCard = "https://huggingface.co/datasets/Anima-Rahman/icr-ds";
+const icrReport = "https://chatgpt.com/library?file_id=libfile_91b783b64dfc8191b036707c7dddff60&account_id=personal";
+const example = (status, note, link) => ({ status, note, link });
+
+const examples = [
+  {
+    id: "physdrive", name: "PhysDrive", version: "公开预处理版 · NeurIPS 2025", source: physRepo,
+    description: "优先验证 RR / HR。先核对雷达切片与路况、动作的映射，再建立低干扰基线。",
+    protocol: "试跑建议：6–10 名司机，先用 30 秒窗。核清工况后，同人同动作比较平坦拥堵和颠簸拥堵。正式评价的阈值由开发数据确定。",
+    checks: {
+      source: example("limited", "官方仓库列出了预处理和申请原始数据两种路径。仍需登记实际下载包的版本、范围和文件清单。", physRepo),
+      radar: example("limited", "公开 mmwave.mat 为裁剪后的雷达表示。仍需按手里的版本抽查轴顺序、复数类型和跨帧相位。", physRepo),
+      scenario: example("limited", "论文有三类路况和两类动作。公开 README 的雷达目录展示数字编号，尚未确认这些编号到路况和动作的映射。", physRepo),
+      rrRef: example("limited", "公开雷达包提供 resp.mat。需核对实际窗口的坏段、参考有效率和 RR 生成方式。", physRepo),
+      hrRef: example("limited", "公开雷达包提供 ecg.mat。需抽检 R 峰及高运动时的参考质量。", physRepo),
+      sync: example("limited", "论文称雷达对应的 ECG/RESP 下采样到 20 Hz，跨模态同步容差约 1 秒。还需核对本地文件的同窗时间轴。", physPaper),
+    },
+  },
+  {
+    id: "icrds", name: "ICR-DS", version: "STAT 实验使用的公开雷达数据", source: icrCard,
+    description: "现有低运动窗口诊断可作补充。逐窗生理信息的证据限定于已测试的相位处理链。",
+    protocol: "当前记录依据 24 个 session 的 214 个双低运动窗口诊断，分析窗 36 秒。候选峰对照包含远区和前后非重叠错时。",
+    checks: {
+      source: example("limited", "已使用公开数据完成相位链诊断。新增审计应记录具体发布快照。公开版未包含原始 ADC。", icrCard),
+      radar: example("pass", "报告已从公开 radar cube 提取复数慢时间通道，并检查 18 秒拼接边界。适用范围为已检验的 radar cube。", icrReport),
+      scenario: example("limited", "有人体和车辆运动评分。车辆评分按 18 秒汇总 GPS/VBOX 特征，有缺失时需要单列。", icrCard),
+      rrRef: example("limited", "BioHarness 提供 1 Hz 呼吸率。已用于速率诊断，连续呼吸波形核验仍缺参考。", icrCard),
+      hrRef: example("limited", "BioHarness 提供 1 Hz 心率及事件式 IBI。逐搏时间精度仍待独立核验。", icrCard),
+      sync: example("limited", "相位诊断的时间信息支持同窗聚合，局部偏移和参考延迟仍待独立核验。", icrReport),
+      chain: example("pass", "已知频率的 36 秒合成 I/Q 可正确通过相位、带通、Welch 和取峰链。真实窗中可见漂移及边缘效应。", icrReport),
+      rrSignal: example("fail", "214 个双低运动窗口里，胸部相对远区或两个方向错时的整体优势不稳健。范围限当前相位处理链。", icrReport),
+      hrSignal: example("fail", "214 个双低运动窗口里，胸部相对远区及非重叠错时的逐窗优势不稳健。范围限当前相位处理链。", icrReport),
+    },
+  },
+];
+
+  </script>
+  <script>
+const storageKey = "radar-dataset-audit-v1";
+const formatVersion = 1;
+const keys = Object.keys(lookup);
+const settingDefaults = { format: formatVersion, active: "physdrive", projects: examples };
+const content = document.querySelector("#content");
+const editor = document.querySelector("#editor");
+const form = document.querySelector("#editor-form");
+const importFile = document.querySelector("#import-file");
+const missing = { status: "pending", note: "", link: "" };
+const iconPaths = {
+  resp: '<path d="M12 4v12M10 9c-2-3-4-2-5 0-1 2-2 6-2 9 0 2 2 2 4 1l4-2M14 9c2-3 4-2 5 0 1 2 2 6 2 9 0 2-2 2-4 1l-4-2"/>',
+  heart: '<path d="M3 12h4l2-4 3 8 2-4h7M19.7 5.8c-2-2-5.5-1.2-7.7 1C9.8 4.6 6.3 3.8 4.3 5.8 2.8 7.3 2.5 9.5 3 11c1.3 4 5.2 8 9 10 3.8-2 7.7-6 9-10 .5-1.5.2-3.7-1.3-5.2Z"/>',
+  wave: '<path d="M2 12h3l3-7 4 14 4-12 3 5h3"/>',
+};
+
+let state = loadState();
+let page = "audit";
+let openStages = new Set([0]);
+let editing = null;
+let dialogTrigger = null;
+let toastTimer;
+
+function escapeHtml(value) {
+  return String(value ?? "").replace(/[&<>"']/g, char => ({
+    "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;",
+  })[char]);
+}
+
+function safeUrl(value) {
+  if (typeof value !== "string") return "";
+  try {
+    const url = new URL(value);
+    return ["https:", "http:"].includes(url.protocol) ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function cleanText(value, limit) {
+  return typeof value === "string" ? value.trim().slice(0, limit) : "";
+}
+
+function cleanProject(raw) {
+  if (!raw || typeof raw !== "object") return null;
+  const name = cleanText(raw.name, 80);
+  if (!name) return null;
+  const checks = {};
+  for (const key of keys) {
+    const record = raw.checks?.[key];
+    if (!record || !Object.hasOwn(statuses, record.status)) continue;
+    const note = cleanText(record.note, 3000);
+    checks[key] = { status: note ? record.status : "pending", note, link: safeUrl(record.link) };
+  }
+  return {
+    id: /^[a-z0-9-]{1,60}$/i.test(raw.id) ? raw.id : newId(),
+    name, version: cleanText(raw.version, 160), source: safeUrl(raw.source),
+    description: cleanText(raw.description, 700), protocol: cleanText(raw.protocol, 4000), checks,
+  };
+}
+
+function validatedBackup(raw) {
+  if (raw?.format !== formatVersion || !Array.isArray(raw.projects) || raw.projects.length > 200) {
+    throw new Error("请选择由此工作台导出的 JSON 备份。");
+  }
+  const projects = raw.projects.map(cleanProject);
+  if (!projects.length || projects.some(project => !project) || new Set(projects.map(project => project.id)).size !== projects.length) {
+    throw new Error("备份中的数据集记录有缺项或编号重复。");
+  }
+  return { format: formatVersion, projects, active: projects.find(project => project.id === raw.active)?.id ?? projects[0].id };
+}
+
+function loadState() {
+  try {
+    const saved = localStorage.getItem(storageKey);
+    if (saved) return validatedBackup(JSON.parse(saved));
+  } catch {
+    document.querySelector("#storage-status").textContent = "未能读取浏览器记录";
+  }
+  return structuredClone(settingDefaults);
+}
+
+function persist() {
+  try {
+    localStorage.setItem(storageKey, JSON.stringify(state));
+    document.querySelector("#storage-status").textContent = "记录保存在当前浏览器";
+  } catch {
+    document.querySelector("#storage-status").textContent = "自动保存失败，请导出备份";
+  }
+}
+
+function newId() {
+  if (globalThis.crypto?.randomUUID) return crypto.randomUUID();
+  return `p-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+}
+
+function getProject() {
+  return state.projects.find(project => project.id === state.active);
+}
+
+function entry(project, key) {
+  return project.checks[key] ?? missing;
+}
+
+function gate(project, requirements) {
+  const blocked = requirements.filter(key => entry(project, key).status !== "pass");
+  for (const status of ["fail", "limited", "pending"]) {
+    const key = blocked.find(candidate => entry(project, candidate).status === status);
+    if (key) return { status, key, blocked };
+  }
+  return { status: "pass", key: null, blocked };
+}
+
+const roadDeps = () => channels[2].requirements;
+function conclusions(project) {
+  const useCases = [
+    ["颠簸条件下 RR 改善", [...channels[0].requirements, ...roadDeps(), "rrAblation"]],
+    ["颠簸条件下 HR 改善", [...channels[1].requirements, ...roadDeps(), "hrAblation"]],
+    ["振动相关成分下降", ["source", "radar", "sync", ...roadDeps(), "imu", "attenuation"]],
+  ];
+  return useCases.map(([title, deps]) => ({ title, ...gate(project, [...new Set(deps)]) }));
+}
+
+function badge(status, label = statuses[status].label) {
+  return `<span class="badge ${statuses[status].tone}">${label}</span>`;
+}
+
+function sourceLink(url, label, className = "") {
+  return url ? `<a class="${className}" href="${escapeHtml(url)}" target="_blank" rel="noopener noreferrer">${label}</a>` : "";
+}
+
+function renderSidebar() {
+  document.querySelector("#dataset-count").textContent = state.projects.length;
+  document.querySelector("#dataset-list").innerHTML = state.projects.map(project => {
+    const selected = project.id === state.active;
+    const initials = Array.from(project.name).slice(0, 2).join("").toUpperCase();
+    return `<button class="dataset${selected ? " active" : ""}" data-action="project" data-value="${project.id}" aria-pressed="${selected}">
+      <span class="dataset-logo" aria-hidden="true">${escapeHtml(initials)}</span>
+      <span><strong>${escapeHtml(project.name)}</strong><small>${escapeHtml(project.version || "待登记版本")}</small></span>
+    </button>`;
+  }).join("");
+}
+
+function renderSummary(project) {
+  return channels.map(channel => {
+    const result = gate(project, channel.requirements);
+    const detail = result.key ? `${lookup[result.key][1]} · ${statuses[result.status].label}` : "已满足当前用途的证据要求";
+    const svg = `<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round">${iconPaths[channel.icon]}</svg>`;
+    return `<article class="summary-card">
+      <div class="card-top"><h2><span class="summary-icon">${svg}</span>${channel.title}</h2>${badge(result.status, result.key ? undefined : channel.ready)}</div>
+      <p>${detail}</p>
+    </article>`;
+  }).join("");
+}
+
+function renderStage(stage, index, project) {
+  const reviewed = stage.checks.filter(([key]) => entry(project, key).status !== "pending").length;
+  const rows = stage.checks.map(([key, title, help]) => {
+    const record = entry(project, key);
+    return `<div class="check-row">
+      <div><h3>${title}</h3><p>${escapeHtml(record.note || help)}</p>${sourceLink(record.link, "查看证据", "evidence-link")}</div>
+      <div class="entry-tools">${badge(record.status)}<button class="text-button" data-action="check" data-value="${key}" aria-label="记录${title}">记录</button></div>
+    </div>`;
+  }).join("");
+  return `<details class="stage panel" data-stage="${index}"${openStages.has(index) ? " open" : ""}>
+    <summary>
+      <span class="stage-number" aria-hidden="true">${String(index + 1).padStart(2, "0")}</span>
+      <span class="stage-title"><strong>${stage.title}</strong><small>${stage.summary}</small></span>
+      <span class="stage-count">${reviewed}/${stage.checks.length} 已记录</span>
+      <span class="chevron" aria-hidden="true"></span>
+    </summary>${rows}
+  </details>`;
+}
+
+function nextCheck(project) {
+  const order = ["source", "scenario", "radar", "coverage", "sync", "rrRef", "hrRef", "chain", "rrSignal", "hrSignal", "matched", "motion", "split", "rrAblation", "hrAblation", "imu", "attenuation"];
+  if (project.id === "physdrive") order.unshift("scenario");
+  return order.find(key => entry(project, key).status !== "pass");
+}
+
+function renderAudit(project) {
+  const reviewed = keys.filter(key => entry(project, key).status !== "pending").length;
+  const next = nextCheck(project);
+  const rows = conclusions(project).map(result => `<div><dt>${result.title}</dt><dd>${badge(result.status, result.key ? undefined : "已有证据")}</dd></div>`);
+  const nextBlock = next ? `<h3>${lookup[next][1]}</h3><p>${escapeHtml(entry(project, next).note || lookup[next][2])}</p><button class="button small outline" data-action="check" data-value="${next}">填写验证结果</button>`
+    : "<p>所有检查均已通过，可导出报告并存档证据。</p>";
+  return `
+    <div class="path"><span>验证工作台</span><span aria-hidden="true">/</span><b>${escapeHtml(project.name)}</b></div>
+    <section class="hero">
+      <div class="hero-content">
+        <div class="hero-meta"><span class="point"></span>${escapeHtml(project.version || "版本待登记")}</div>
+        <h1>${escapeHtml(project.name)}</h1>
+        <p>${escapeHtml(project.description || "从数据版本、参考质量与时间对齐开始，逐项记录可支持的实验结论。")}</p>
+        <div class="hero-actions"><button class="button small outline" data-action="edit">编辑数据集</button>${sourceLink(project.source, "查看数据来源")}</div>
+      </div>
+      <div class="radar" aria-hidden="true"><div class="radar-grid"></div><div class="radar-sweep"></div><i class="radar-dot center"></i><i class="radar-dot near"></i><i class="radar-dot far"></i></div>
+    </section>
+    <section class="summary" aria-label="当前可用性">${renderSummary(project)}</section>
+    <div class="work-area">
+      <section aria-labelledby="checks-title">
+        <div class="checks-title">
+          <div><h2 id="checks-title">验证清单</h2><p>展开任一阶段，逐项记录结果和证据。</p></div>
+          <div class="progress">${reviewed} / ${keys.length} 已记录<progress aria-label="已记录检查项" value="${reviewed}" max="${keys.length}"></progress></div>
+        </div>
+        ${stages.map((stage, index) => renderStage(stage, index, project)).join("")}
+      </section>
+      <aside class="right-stack" aria-label="实验结论与下一步">
+        <section class="panel side-panel next-panel"><h2>下一项验证</h2>${nextBlock}</section>
+        <section class="panel side-panel"><h2>抑制结论</h2><dl class="verdicts">${rows.join("")}</dl><p>物理振动结论需要独立同步的振动参考和前后对照。</p></section>
+        <section class="panel side-panel protocol-panel"><h2>实验协议</h2><p class="protocol-text">${escapeHtml(project.protocol || "记录样本范围、窗长、频带、阈值、划分和主要对照。")}</p><button class="text-button" data-action="edit">编辑协议</button></section>
+      </aside>
+    </div>`;
+}
+
+function renderCompare() {
+  const rows = state.projects.map(project => {
+    const preliminary = channels.map(channel => ({ title: channel.title, ...gate(project, channel.requirements) }));
+    const confirmed = conclusions(project).slice(-1);
+    const cells = [...preliminary, ...confirmed].map(result =>
+      `<td>${badge(result.status, result.key ? undefined : "已有证据")}${result.key ? `<p>${lookup[result.key][1]}</p>` : ""}</td>`).join("");
+    return `<tr><th scope="row"><button class="text-button" data-action="project" data-value="${project.id}">${escapeHtml(project.name)}</button></th>${cells}</tr>`;
+  }).join("");
+  return `<header class="page-heading"><h1>数据集对比</h1><p>查看每套数据当前支持的用途和仍需补充的证据。</p></header>
+    <section class="panel secondary table-wrap">
+      <table><thead><tr><th scope="col">数据集</th><th scope="col">呼吸率提取</th><th scope="col">心率提取</th><th scope="col">颠簸场景对照</th><th scope="col">振动相关成分下降</th></tr></thead>
+      <tbody>${rows}</tbody></table>
+    </section>`;
+}
+
+function renderGuide() {
+  const cards = guide.map(([title, text]) => `<section class="panel secondary"><h2>${title}</h2><p>${text}</p></section>`).join("");
+  return `<header class="page-heading"><h1>实验手册</h1><p>把抽检规则固定下来，让新数据集可以按同一套证据要求验证。</p></header>
+    <div class="guide-grid">${cards}</div>
+    <button class="button primary copy-brief" data-action="brief">下载验证任务单</button>`;
+}
+
+function render() {
+  renderSidebar();
+  document.querySelectorAll(".tab").forEach(tab => {
+    const active = tab.dataset.value === page;
+    tab.classList.toggle("active", active);
+    if (active) tab.setAttribute("aria-current", "page");
+    else tab.removeAttribute("aria-current");
+  });
+  const project = getProject();
+  document.querySelector("#export-button").setAttribute("aria-label", `导出 ${project.name} 报告`);
+  const views = { audit: () => renderAudit(project), compare: renderCompare, guide: renderGuide };
+  content.innerHTML = views[page]();
+}
+
+function showPage(next) {
+  page = next;
+  render();
+  window.scrollTo(0, 0);
+  content.focus({ preventScroll: true });
+}
+
+function field(label, name, value, limit, kind = "text", required = false) {
+  const safe = escapeHtml(value);
+  const attributes = `name="${name}" maxlength="${limit}"${required ? " required" : ""}`;
+  return `<label class="field"><span>${label}</span>${kind === "textarea"
+    ? `<textarea ${attributes}>${safe}</textarea>`
+    : `<input type="${kind}" ${attributes} value="${safe}">`}</label>`;
+}
+
+function editDialog(type, key, trigger) {
+  editing = { type, key };
+  dialogTrigger = trigger;
+  let heading;
+  let fields;
+  if (type === "check") {
+    const [, title, help, output] = lookup[key];
+    const record = entry(getProject(), key);
+    heading = title;
+    const options = Object.entries(statuses).map(([value, status]) =>
+      `<option value="${value}"${value === record.status ? " selected" : ""}>${status.label}</option>`).join("");
+    fields = `<p class="form-help">${help}</p><p class="form-help"><strong>通过条件</strong>　${acceptance[key]}</p><p class="form-help"><strong>证据建议</strong>　${output}</p>
+      <label class="field"><span>验证状态</span><span class="select-wrap"><select name="status">${options}</select></span></label>
+      ${field("结果与适用范围", "note", record.note, 3000, "textarea", record.status !== "pending")}
+      ${field("证据链接（可选）", "link", record.link, 2048, "url")}`;
+  } else {
+    const project = type === "new" ? {} : getProject();
+    heading = type === "new" ? "新建数据集验证" : "编辑数据集";
+    fields = [
+      field("数据集名称", "name", project.name, 80, "text", true),
+      field("版本或下载快照", "version", project.version, 160),
+      field("下载来源或论文链接", "source", project.source, 2048, "url"),
+      field("研究目标与范围", "description", project.description, 700, "textarea"),
+      field("实验协议与阈值", "protocol", project.protocol, 4000, "textarea"),
+    ].join("");
+  }
+  document.querySelector("#dialog-title").textContent = heading;
+  document.querySelector("#dialog-fields").innerHTML = fields;
+  editor.showModal();
+  const target = type === "protocol" ? form.elements.protocol : form.querySelector("input, select, textarea");
+  target.focus();
+}
+
+function showToast(message) {
+  const toast = document.querySelector("#toast");
+  clearTimeout(toastTimer);
+  toast.textContent = message;
+  toast.classList.add("show");
+  toastTimer = setTimeout(() => toast.classList.remove("show"), 3200);
+}
+
+function saveEditor(event) {
+  event.preventDefault();
+  const values = new FormData(form);
+  const project = getProject();
+  const { type, key } = editing;
+  if (type === "check") {
+    const status = values.get("status");
+    const note = cleanText(values.get("note"), 3000);
+    if (status !== "pending" && !note) {
+      form.elements.note.setCustomValidity("请填写结果、依据或适用范围。");
+      form.elements.note.reportValidity();
+      return;
+    }
+    project.checks[key] = { status, note, link: safeUrl(values.get("link")) };
+    openStages.add(stages.findIndex(stage => stage.checks.some(check => check[0] === key)));
+  } else {
+    if (type === "new" && state.projects.length >= 200) {
+      showToast("已达到 200 个数据集上限。");
+      return;
+    }
+    const updated = cleanProject({ ...Object.fromEntries(values), id: type === "new" ? newId() : project.id, checks: type === "new" ? {} : project.checks });
+    if (!updated) {
+      form.elements.name.setCustomValidity("请输入数据集名称。");
+      form.elements.name.reportValidity();
+      return;
+    }
+    if (type === "new") {
+      state.projects.push(updated);
+      state.active = updated.id;
+      openStages = new Set([0]);
+    } else {
+      state.projects[state.projects.indexOf(project)] = updated;
+    }
+  }
+  persist();
+  editor.close();
+  if (type === "new") showPage("audit");
+  else {
+    render();
+    const focusTarget = type === "check" ? content.querySelector(`[data-action="check"][data-value="${key}"]`) : content.querySelector('[data-action="edit"]');
+    focusTarget?.focus({ preventScroll: true });
+  }
+  showToast("验证记录已更新");
+}
+
+function download(filename, text, mediaType) {
+  const url = URL.createObjectURL(new Blob([text], { type: `${mediaType};charset=utf-8` }));
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  document.body.append(anchor);
+  anchor.click();
+  anchor.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 15000);
+}
+
+function validFilename(name) {
+  return name.replace(/[<>:"/\\|?*\u0000-\u001F]/g, "_").replace(/[. ]+$/, "").slice(0, 72) || "数据集";
+}
+
+function reportFor(project) {
+  const summary = channels.map(channel => ({ title: channel.title, ...gate(project, channel.requirements) }));
+  const decisions = [...summary, ...conclusions(project)].map(result =>
+    `- **${result.title}**　${statuses[result.status].label}${result.blocked.length ? `。待补充 ${result.blocked.map(key => lookup[key][1]).join("、")}` : ""}`);
+  const records = stages.flatMap(stage => [
+    `\n## ${stage.title}`,
+    ...stage.checks.map(([key, title]) => {
+      const record = entry(project, key);
+      return `\n### ${title} · ${statuses[record.status].label}\n\n${record.note || "暂无记录。"}${record.link ? `\n\n[证据链接](<${record.link}>)` : ""}`;
+    }),
+  ]);
+  return [
+    `# ${project.name.replace(/[\r\n]+/g, " ")} 数据集可用性报告`, "",
+    `- 版本　${project.version || "待登记"}`,
+    `- 导出日期　${new Intl.DateTimeFormat("sv-SE", { timeZone: "Asia/Shanghai" }).format(new Date())}`,
+    project.source ? `- [数据来源](<${project.source}>)` : "",
+    "", project.description, "", "## 可支持的研究用途", "", ...decisions,
+    "", "## 实验协议", "", project.protocol || "待填写。", ...records, "",
+  ].join("\n");
+}
+
+function taskBrief(project) {
+  const items = stages.flatMap(stage => [
+    `\n## ${stage.title}\n`,
+    ...stage.checks.map(([key, title, method, result]) => {
+      const record = entry(project, key);
+      return `- **${title}**　${method}\n  - 通过条件　${acceptance[key]}\n  - 交付　${result}\n  - 当前　${statuses[record.status].label}。${record.note ? `\n  - 已有记录　${record.note}` : ""}`;
+    }),
+  ]);
+  return [
+    `# ${project.name} 数据集验证任务单`,
+    "", "以车内毫米波雷达为唯一生理估计输入，分别验证呼吸率和心率。每项写明所用文件版本、窗口数、受试者数、结果及证据路径。对缺失或不可确认的项保持待验证，并说明原因。先审计低干扰基线，通过后再推进颠簸对照。不要用测试真值选择通道、调偏移或设阈值。",
+    "", `版本：${project.version || "待登记"}`, project.protocol ? `\n已有协议：${project.protocol}` : "", ...items, "",
+  ].join("\n");
+}
+
+async function importBackup() {
+  const [file] = importFile.files;
+  importFile.value = "";
+  if (!file) return;
+  try {
+    if (file.size > 40 * 1024 * 1024) throw new Error("备份文件超过 40 MB。");
+    const incoming = validatedBackup(JSON.parse((await file.text()).replace(/^\uFEFF/, "")));
+    const additions = incoming.projects.filter(project => {
+      const existing = state.projects.find(current => current.id === project.id);
+      return !existing || JSON.stringify(existing) !== JSON.stringify(project);
+    });
+    if (!additions.length) {
+      showToast("已有相同记录，无需重复导入");
+      return;
+    }
+    if (state.projects.length + additions.length > 200) throw new Error("导入后会超过 200 个数据集上限。");
+    for (const project of additions) {
+      if (state.projects.some(current => current.id === project.id)) {
+        project.id = newId();
+        project.name = `${project.name.slice(0, 73)}（导入）`;
+      }
+      state.projects.push(project);
+    }
+    state.active = additions[0].id;
+    openStages = new Set([0]);
+    persist();
+    showPage("audit");
+    showToast(`已导入 ${additions.length} 套数据集记录`);
+  } catch (error) {
+    showToast(error instanceof SyntaxError ? "无法解析备份文件" : error.message);
+  }
+}
+
+document.addEventListener("click", event => {
+  const button = event.target.closest("[data-action]");
+  if (!button) return;
+  const { action, value } = button.dataset;
+  const project = getProject();
+  switch (action) {
+    case "new": editDialog("new", null, button); break;
+    case "edit": editDialog(button.closest(".protocol-panel") ? "protocol" : "edit", null, button); break;
+    case "check": editDialog("check", value, button); break;
+    case "close": editor.close(); break;
+    case "view": showPage(value); break;
+    case "project":
+      state.active = value;
+      openStages = new Set([0]);
+      persist();
+      showPage("audit");
+      break;
+    case "export":
+      download(`${validFilename(project.name)}_可用性报告.md`, reportFor(project), "text/markdown");
+      showToast("已导出可用性报告");
+      break;
+    case "brief":
+      download(`${validFilename(project.name)}_验证任务单.md`, taskBrief(project), "text/markdown");
+      showToast("已下载验证任务单");
+      break;
+    case "backup":
+      download("车载雷达数据验证备份.json", JSON.stringify(state, null, 2), "application/json");
+      showToast("已导出全部数据集记录");
+      break;
+    case "import": importFile.click(); break;
+  }
+});
+
+content.addEventListener("toggle", event => {
+  const details = event.target;
+  if (!details.matches("details[data-stage]") || !details.isConnected) return;
+  const index = Number(details.dataset.stage);
+  if (details.open) openStages.add(index);
+  else openStages.delete(index);
+}, true);
+
+form.addEventListener("submit", saveEditor);
+form.addEventListener("input", event => event.target.setCustomValidity?.(""));
+form.addEventListener("change", event => {
+  if (event.target.name !== "status") return;
+  form.elements.note.setCustomValidity("");
+  form.elements.note.required = event.target.value !== "pending";
+});
+editor.addEventListener("close", () => {
+  if (document.activeElement === document.body) dialogTrigger?.focus({ preventScroll: true });
+});
+importFile.addEventListener("change", importBackup);
+render();
+
+  </script>
+</body>
+</html>
