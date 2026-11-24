@@ -6,7 +6,7 @@
 
 直接修改 `index.html`（HTML / CSS / JS 都在这一个文件里），然后 commit 并 push 到 `main` 分支。`.github/workflows/deploy-pages.yml` 会自动把最新内容部署到 GitHub Pages，不需要手动发布。
 
-线上地址：https://nanoandluna.github.io/radar-dataset-audit/
+线上地址：https://yuan-qingyang.github.io/radar-dataset-audit/
 
 ## 注意事项
 
