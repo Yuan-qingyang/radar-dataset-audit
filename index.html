@@ -145,6 +145,7 @@ main { max-width: 1510px; width: 100%; margin-inline: auto; padding: 28px 38px 4
 .verdicts > div { padding: 8px 0; border-top: 1px solid #f0eff6; display: flex; align-items: center; gap: 6px; justify-content: space-between; }
 .verdicts > div:first-child { border-top: 0; }
 .verdicts dt { color: #3d455d; font-size: 13px; }
+.verdicts dt small { display: block; margin-top: 3px; color: var(--muted); font-size: 12px; }
 .verdicts dd { margin: 0; }
 .protocol-text { white-space: pre-wrap; }
 .page-heading { padding: 4px 0 22px; }
@@ -511,13 +512,36 @@ function gate(project, requirements) {
 }
 
 const roadDeps = () => channels[2].requirements;
+
+function vibrationConclusion(project) {
+  const requirements = [...new Set(["source", "radar", "sync", ...roadDeps(), "imu", "attenuation"])];
+  const result = gate(project, requirements);
+  const title = "振动相关成分下降";
+  const reference = entry(project, "imu").status;
+  const comparison = entry(project, "attenuation").status;
+
+  if (reference !== "pass") {
+    const detail = reference === "pending"
+      ? "缺少独立同步的振动参考"
+      : "独立振动参考尚未达到验证要求";
+    return { ...result, title, status: "pending", key: "imu", detail };
+  }
+  if (comparison !== "pass") {
+    const detail = comparison === "pending"
+      ? "尚未完成抑制前后对照"
+      : "抑制前后对照见验证记录";
+    return { ...result, title, status: comparison, key: "attenuation", detail };
+  }
+  return { title, ...result };
+}
+
 function conclusions(project) {
   const useCases = [
     ["颠簸条件下 RR 改善", [...channels[0].requirements, ...roadDeps(), "rrAblation"]],
     ["颠簸条件下 HR 改善", [...channels[1].requirements, ...roadDeps(), "hrAblation"]],
-    ["振动相关成分下降", ["source", "radar", "sync", ...roadDeps(), "imu", "attenuation"]],
   ];
-  return useCases.map(([title, deps]) => ({ title, ...gate(project, [...new Set(deps)]) }));
+  const roadResults = useCases.map(([title, deps]) => ({ title, ...gate(project, [...new Set(deps)]) }));
+  return [...roadResults, vibrationConclusion(project)];
 }
 
 function badge(status, label = statuses[status].label) {
@@ -580,7 +604,7 @@ function nextCheck(project) {
 function renderAudit(project) {
   const reviewed = keys.filter(key => entry(project, key).status !== "pending").length;
   const next = nextCheck(project);
-  const rows = conclusions(project).map(result => `<div><dt>${result.title}</dt><dd>${badge(result.status, result.key ? undefined : "已有证据")}</dd></div>`);
+  const rows = conclusions(project).map(result => `<div><dt>${result.title}${result.detail ? `<small>${result.detail}</small>` : ""}</dt><dd>${badge(result.status, result.key ? undefined : "已有证据")}</dd></div>`);
   const nextBlock = next ? `<h3>${lookup[next][1]}</h3><p>${escapeHtml(entry(project, next).note || lookup[next][2])}</p><button class="button small outline" data-action="check" data-value="${next}">填写验证结果</button>`
     : "<p>所有检查均已通过，可导出报告并存档证据。</p>";
   return `
@@ -614,9 +638,10 @@ function renderAudit(project) {
 function renderCompare() {
   const rows = state.projects.map(project => {
     const preliminary = channels.map(channel => ({ title: channel.title, ...gate(project, channel.requirements) }));
-    const confirmed = conclusions(project).slice(-1);
-    const cells = [...preliminary, ...confirmed].map(result =>
-      `<td>${badge(result.status, result.key ? undefined : "已有证据")}${result.key ? `<p>${lookup[result.key][1]}</p>` : ""}</td>`).join("");
+    const cells = [...preliminary, vibrationConclusion(project)].map(result => {
+      const detail = result.detail ?? (result.key ? lookup[result.key][1] : "");
+      return `<td>${badge(result.status, result.key ? undefined : "已有证据")}${detail ? `<p>${detail}</p>` : ""}</td>`;
+    }).join("");
     return `<tr><th scope="row"><button class="text-button" data-action="project" data-value="${project.id}">${escapeHtml(project.name)}</button></th>${cells}</tr>`;
   }).join("");
   return `<header class="page-heading"><h1>数据集对比</h1><p>查看每套数据当前支持的用途和仍需补充的证据。</p></header>
@@ -766,7 +791,7 @@ function validFilename(name) {
 function reportFor(project) {
   const summary = channels.map(channel => ({ title: channel.title, ...gate(project, channel.requirements) }));
   const decisions = [...summary, ...conclusions(project)].map(result =>
-    `- **${result.title}**　${statuses[result.status].label}${result.blocked.length ? `。待补充 ${result.blocked.map(key => lookup[key][1]).join("、")}` : ""}`);
+    `- **${result.title}**　${statuses[result.status].label}${result.detail ? ` · ${result.detail}` : ""}${result.blocked.length ? `。待补充 ${result.blocked.map(key => lookup[key][1]).join("、")}` : ""}`);
   const records = stages.flatMap(stage => [
     `\n## ${stage.title}`,
     ...stage.checks.map(([key, title]) => {
